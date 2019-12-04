@@ -21,7 +21,6 @@ y1_in_m = 0.006;            % [m]
 y2_in_m = 0.010;            % [m]
 diameter_gel_in_m = 0.15;   % [m]
 thickness_gel_in_m = 0.014; % [m]
-
 spacing = 2.5e-3;           % [m]
 x_size = diameter_gel_in_m + 2* x1_in_m;            %[m] total size x-direction
 y_size = x_size;                                    %[m] total size y-direction
@@ -34,8 +33,8 @@ Ny = ceil(y_size/dy);                               % number of grid points in t
 Nz = ceil(z_size/dz);                               % number of grid points in the z direction
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 %% simulation time and step size
-dt = 0.3 * spacing / c_compression; % CFL*dx/c_max CFL 0.3 default
-t_end = dt*4000; % [s]
+dt = 0.01 * spacing / c_compression; % CFL*dx/c_max CFL 0.3 default
+t_end = 0.004; %dt*500; % [s]
 kgrid.t_array = 0:dt:t_end;
 %% Geometry 
 % 1. gel
@@ -68,14 +67,14 @@ medium.alpha_coeff_compression = medium.alpha_coeff_compression + gel * 0.5;    
 medium.alpha_coeff_shear = medium.alpha_coeff_shear + gel * 0.5;                        % [10–3 m–1] 
 medium.density = medium.density + gel * 923.47;                                         % [kg/m^3]
 % 2. air
-medium.sound_speed_compression = medium.sound_speed_compression + air * c_compression;            % [m/s]
-medium.sound_speed_shear = medium.sound_speed_shear + air * 0                           % [m/s]
+medium.sound_speed_compression = medium.sound_speed_compression + air * c_compression;  % [m/s]
+medium.sound_speed_shear = medium.sound_speed_shear + air * c_shear;                    % [m/s]
 medium.alpha_coeff_compression = medium.alpha_coeff_compression + air * 0.5;            % [10–3 m–1] 
 medium.alpha_coeff_shear = medium.alpha_coeff_shear + air * 0.5;                        % [10–3 m–1] 
 medium.density = medium.density + air * 1.225;                                          % [kg/m^3]
 % 3. bottom
 medium.sound_speed_compression = medium.sound_speed_compression + bottom * c_compression;        % [m/s]
-medium.sound_speed_shear = medium.sound_speed_shear + bottom * c_compression;                    % [m/s]
+medium.sound_speed_shear = medium.sound_speed_shear + bottom * c_shear;                 % [m/s]
 medium.alpha_coeff_compression = medium.alpha_coeff_compression + bottom * 0.5;         % [10–3 m–1] 
 medium.alpha_coeff_shear = medium.alpha_coeff_shear + bottom * 0.5;                     % [10–3 m–1] 
 medium.density = medium.density + bottom * 7700;                                        % [kg/m^3]
@@ -86,7 +85,7 @@ medium.density = medium.density + bottom * 7700;                                
 % define a square source element
 source.u_mask = zeros(Nx,Ny,Nz);
 source_radius = 1; %0.005/dx;  % [grid points]
-source.u_mask(Nx/2 - source_radius:Nx/2 + source_radius, Ny/2 - source_radius:Ny/2 + source_radius, gel_surface_z) = 1;
+source.u_mask(Nx/2 - source_radius:Nx/2 + source_radius, Ny/2 - source_radius:Ny/2 + source_radius, gel_surface_z+1) = 1;
 nbr_of_sources = sum(source.u_mask, "all");
 if(sinusoidal)
     % define a time varying sinusoidal source
@@ -122,7 +121,7 @@ sensor.mask = ones(Nx,Ny,Nz);
 voxelPlot(gel);
 % voxelPlot(air);
 % voxelPlot(bottom);
-start_ = [Nx/2 - source_radius, Ny/2 - source_radius, gel_surface_z];
+start_ = [Nx/2 - source_radius, Ny/2 - source_radius, gel_surface_z+1];
 size_ = [2*source_radius,2*source_radius,1];
 voxel(start_, size_, 'b', 1);
 %% run the simulation 
