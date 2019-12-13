@@ -2,7 +2,8 @@ clc;
 %% parameter
 % Actuator input:
 sinusoidal = 0;
-gaussian = 1;
+gaussian = 0;
+impulse = 1;
 % Boundary conditions:
 reflecting = 0;
 bc_vel_bottom = 0; % first two layer vel = 0
@@ -21,7 +22,7 @@ y1_in_m = 0.006;            % [m]
 y2_in_m = 0.010;            % [m]
 diameter_gel_in_m = 0.15;   % [m]
 thickness_gel_in_m = 0.014; % [m]
-spacing = 2.5e-3;           % [m]
+spacing = 5e-3;             % [m]
 x_size = diameter_gel_in_m + 2* x1_in_m;            %[m] total size x-direction
 y_size = x_size;                                    %[m] total size y-direction
 z_size = thickness_gel_in_m + y1_in_m + y2_in_m;    %[m] total size z-direction
@@ -33,8 +34,8 @@ Ny = ceil(y_size/dy);                               % number of grid points in t
 Nz = ceil(z_size/dz);                               % number of grid points in the z direction
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 %% simulation time and step size
-dt = 0.01 * spacing / c_compression; % CFL*dx/c_max CFL 0.3 default
-t_end = 0.004; %dt*500; % [s]
+dt = 0.05 * spacing / c_compression; % CFL*dx/c_max CFL 0.3 default
+t_end = 0.010; %dt*500; % [s]
 kgrid.t_array = 0:dt:t_end;
 %% Geometry 
 % 1. gel
@@ -77,58 +78,67 @@ medium.sound_speed_compression = medium.sound_speed_compression + bottom * c_com
 medium.sound_speed_shear = medium.sound_speed_shear + bottom * c_shear;                 % [m/s]
 medium.alpha_coeff_compression = medium.alpha_coeff_compression + bottom * 0.5;         % [10–3 m–1] 
 medium.alpha_coeff_shear = medium.alpha_coeff_shear + bottom * 0.5;                     % [10–3 m–1] 
-medium.density = medium.density + bottom * 7700;                                        % [kg/m^3]
+medium.density = medium.density + bottom * 7700; % density steel                        % [kg/m^3]
 %% boundary conditions
 % defined by medium properties, PML at end of the script, for more bc look
 % in earlier scripts
 %% source
 % define a square source element
 source.u_mask = zeros(Nx,Ny,Nz);
-source_radius = 1; %0.005/dx;  % [grid points]
-source.u_mask(Nx/2 - source_radius:Nx/2 + source_radius, Ny/2 - source_radius:Ny/2 + source_radius, gel_surface_z+1) = 1;
+source_radius = 0.5; %0.005/dx;  % [grid points]
+source.u_mask(Nx/2 - source_radius:Nx/2 + source_radius, Ny/2 - source_radius:Ny/2 + source_radius, gel_surface_z) = 1;
 nbr_of_sources = sum(source.u_mask, "all");
 if(sinusoidal)
     % define a time varying sinusoidal source
     source_freq = f_max; %2/(t_end);      % [Hz]
     source_mag = 0.001;           % [m]
     stimulation_z = source_mag * sin(2 * pi * source_freq * kgrid.t_array);
-    tp = find(kgrid.t_array == (0.5/source_freq));
+    tp = find(kgrid.t_array < (0.5/f_max));
     sources_v = source_mag * cos(2 * pi * source_freq * kgrid.t_array) * 2 * pi * source_freq;
     smooth_beg = 0.5* sin(2*pi*source_freq*kgrid.t_array + pi/8*source_freq) + 0.5;
-    smooth_beg(tp:end) = 1;
+    smooth_beg(tp(end):end) = 1;
     v_smooth = sources_v .* smooth_beg;
-%     source.uz(nbr_of_sources_1 + 1: nbr_of_sources_2 + nbr_of_sources_1, 1:kgrid.Nt) = repelem(v_smooth, nbr_of_sources_2, 1);
-    source.uz(find(mask == 2),:) = repelem(vel_gaussian,nbr_of_sources_2, 1);
+    source.uz = repelem(v_smooth,nbr_of_sources, 1);
+end
+if(impulse)
+    tp = find(kgrid.t_array < (0.5/f_max));
+    u_imp = -0.0001*(0.5* sin(2*pi*f_max*kgrid.t_array + pi/8*f_max) + 0.5);
+    u_imp(tp(end):end) = 0;
+    v_imp = [0 diff(u_imp)/dt];
+    v_imp(tp(end)) = 0;
+    source.uz = repelem(v_imp,nbr_of_sources, 1);  
 end
 if(gaussian)
-    pos = 0.0003 * gaussmf(kgrid.t_array, [t_end/20 t_end/6]);
-%    pos = 0.001 * gaussmf(kgrid.t_array, [t_end/20 t_end/6]);
+    pos = -0.01 * gaussmf(kgrid.t_array, [0.0005 0.5/f_max]);
     vel_gaussian = [0 diff(pos)./dt];
-    source.uz = repelem(vel_gaussian,nbr_of_sources, 1);
-    figure(11);
-    subplot(2,1,1);
-    plot(kgrid.t_array, source.uz(end,:));
-    title("Actuator input velocity");
-    subplot(2,1,2);
-    plot(kgrid.t_array, pos);
-    title("Actuator input position");    
+    source.uz = repelem(vel_gaussian,nbr_of_sources, 1);   
 end
-source.u_mode= 'dirichlet';
+figure(11);
+subplot(2,1,1);
+plot(kgrid.t_array, source.uz(end,:));
+title("Actuator input velocity");
+subplot(2,1,2);
+plot(kgrid.t_array, vel_to_pos(source.uz(end,:),dt));
+title("Actuator input position");   
+% source.u_mode = 'dirichlet';
 %% sensor
 % all points are being saved:
 sensor.mask = ones(Nx,Ny,Nz);
+% only surface is being saved:
+% sensor.mask = zeros(Nx,Ny,Nz);
+% sensor.mask(:,:,gel_surface_z);
 %% plot gel, source and sensor
 voxelPlot(gel);
 % voxelPlot(air);
 % voxelPlot(bottom);
-start_ = [Nx/2 - source_radius, Ny/2 - source_radius, gel_surface_z+1];
+start_ = [Nx/2 - source_radius, Ny/2 - source_radius, gel_surface_z];
 size_ = [2*source_radius,2*source_radius,1];
 voxel(start_, size_, 'b', 1);
 %% run the simulation 
 sensor.record = {'u'} % u particle velocity
 % PML
 % lambda=c0/f0;    % wavelength in lighter product (m)
-% h=lambda/6;                 % desired spatial step (m)
+% h=lambda/6;      % desired spatial step (m)
 if(reflecting)
     PML_size = 0;             % size of the PML in grid points
     pml_alpha = 0;

@@ -5,7 +5,7 @@ pos = vel_to_pos(sensor_data.uz, dt);
 nbr_of_timesteps = size(uz,2);
 ts = 1 * nbr_of_timesteps;
 % pos_top = vel_to_pos(uz(end-Nx*Ny+1:end,:), dt);
-% % pos = vel_to_pos(uz, dt);
+% pos = vel_to_pos(uz, dt);
 
 uz_3d = reshape(sensor_data.uz,Nx,Ny,Nz,kgrid.Nt);
 uz_2d_top = zeros(Nx,Ny,kgrid.Nt);
@@ -19,7 +19,7 @@ min_z = min(posz_2d_top,[], "all")
 maxv_b = max(uz_bottom,[], 'all');
 minv_b = min(uz_bottom,[], 'all');
 
-for t=1:10:ts %nbr_of_timesteps
+for t=1:20:ts %nbr_of_timesteps
     pos_t = posz_2d_top(:,:,t);
     surf(x,y,pos_t);
     zlim([-0.001 0.001]); %     zlim([2*min_z 2*max_z]);%     zlim([2.5e-3 0.6*max_v]);
