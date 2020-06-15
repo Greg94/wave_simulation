@@ -5,7 +5,7 @@ clc;
 f_max = 4; %[Hz]
 %%  create the computational grid
 % diameter: 15cm, thickness: 1.4cm
-spacing = 5e-3;
+spacing = 5e-4;
 x_size = 0.25;            %[m] total size x-direction
 y_size = 0.25;            %[m] total size y-direction
 z_size = 0.05;           %[m] total size z-direction

@@ -1,6 +1,7 @@
 
 % Quadratic gel simulation (no air)
 clc;
+clearvars;
 %% parameter
 % Actuator input:
 sinusoidal = 0;

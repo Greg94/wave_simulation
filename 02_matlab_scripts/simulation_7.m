@@ -1,4 +1,5 @@
 clc;
+clearvars;
 %% parameter
 % Actuator input:
 sinusoidal = 0;
@@ -8,10 +9,10 @@ impulse = 1;
 reflecting = 0;
 bc_vel_bottom = 0; % first two layer vel = 0
 bc_free_surface = 0; % stress on the boundary = 0
-c_compression = 25.0; %artificially low compression wave speed
+c_compression = 100.0; %artificially low compression wave speed
 c_shear = 4.0; % shear wave speed in gelatin 
 % Other:
-f_max = 300; %[Hz]
+f_max = 300; % Maximum frequency[Hz]
 %% computational grid
 % _________________________________________
 % |     _____________________________ air | y1
@@ -22,7 +23,7 @@ y1_in_m = 0.006;            % [m]
 y2_in_m = 0.010;            % [m]
 diameter_gel_in_m = 0.15;   % [m]
 thickness_gel_in_m = 0.014; % [m]
-spacing = 5e-3;             % [m]
+spacing = 2e-3;             % [m]
 x_size = diameter_gel_in_m + 2* x1_in_m;            %[m] total size x-direction
 y_size = x_size;                                    %[m] total size y-direction
 z_size = thickness_gel_in_m + y1_in_m + y2_in_m;    %[m] total size z-direction
@@ -34,7 +35,7 @@ Ny = ceil(y_size/dy);                               % number of grid points in t
 Nz = ceil(z_size/dz);                               % number of grid points in the z direction
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 %% simulation time and step size
-dt = 0.05 * spacing / c_compression; % CFL*dx/c_max CFL 0.3 default
+dt = 0.3 * spacing / c_compression; % CFL*dx/c_max CFL 0.3 default
 t_end = 0.010; %dt*500; % [s]
 kgrid.t_array = 0:dt:t_end;
 %% Geometry 
@@ -124,6 +125,7 @@ title("Actuator input position");
 %% sensor
 % all points are being saved:
 sensor.mask = ones(Nx,Ny,Nz);
+sensor.record = {'u_split_field'};
 % only surface is being saved:
 % sensor.mask = zeros(Nx,Ny,Nz);
 % sensor.mask(:,:,gel_surface_z);
